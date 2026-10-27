@@ -111,9 +111,36 @@ Repo → **Settings → Secrets and variables → Actions** → vier Secrets anl
 | ◎ | **Gravity-Switch** | Invertiert die Gravitation. Springen geht dann „nach unten“ |
 | ▣ | **Terminal** | Öffnet die nächste Firewall-Spalte rechts davon |
 | ‖ | **Firewall** | Rote Laserwand, blockiert bis zum Terminal-Hack |
-| ◇ | **Exit** | Level geschafft, nächstes wird freigeschaltet |
+| ◇ | **Exit** | Level geschafft, nächstes wird freigeschaltet. In Boss-Arenen gesperrt, bis der Boss fällt |
+| ⚑ | **Checkpoint** | Nach einem Treffer startest du hier statt am Anfang |
+| ┆ | **Gravity-Reset** | Leuchtende Dot-Säule hinter Gravity-Abschnitten: setzt die Gravitation zurück auf normal |
+| ▩ | **Boss** | Von oben treffen (rote Schwachstelle) = Schaden. Seitlich = du nimmst Schaden |
 
 Daemons an der Decke gibt es auch. Die erwischst du von unten.
+
+---
+
+## Kampagne: 100 Level, 10 Bosse
+
+10 Welten à 10 Level. Mit jedem Level werden die Abschnitte länger, die Bausteine schwerer und die Daemons schneller.
+Jedes 10. Level ist eine Boss-Arena gegen eine eigene Malware-Familie:
+
+| Level | Welt | Boss | Mechanik |
+|---|---|---|---|
+| 10 | BOOTLOADER | **RANSOMWARE** | Countdown läuft. Bei 00:00 sind deine Dateien verschlüsselt → SEGFAULT. Jeder Treffer gibt +8 s |
+| 20 | USERSPACE | **TROJAN.DLL** | Tarnt sich als harmloser Data-Shard und schlägt zu, wenn du nah kommst |
+| 30 | FILESYSTEM | **SPYWARE** | Liest deine Eingaben mit und bewegt sich gespiegelt. Klaut zeitweise dein HUD |
+| 40 | NETSTACK | **WORM** | Repliziert sich alle paar Sekunden als neue Daemons |
+| 50 | KERNEL | **ROOTKIT** | Unsichtbar und unverwundbar. Nur Kernel-Scans oder ein Terminal-Hack decken es auf |
+| 60 | BROWSER | **ADWARE** | Pop-ups verdecken den Bildschirm |
+| 70 | CLOUD | **BOTNET.CNC** | Der CNC-Knoten schwebt unerreichbar, bis alle Bots zerstört sind |
+| 80 | FIRMWARE | **ZERO-DAY** | Zufällige Exploits: Steuerung invertiert, Speed-Surge, Teleport |
+| 90 | MAINFRAME | **APT.GHOST** | Verfolgt dich, regeneriert sich und steht einmal wieder auf |
+| 100 | OMNIGRID | **OMNIGRID.EXE** | Endboss in 3 Phasen: Ransomware + Worm → Spyware + Adware → Zero-Day + APT |
+
+Level 1–5 sind handgebaut ([`Levels.kt`](core/src/main/kotlin/dev/corebreach/level/Levels.kt)).
+Die restlichen Standard-Level setzt [`Campaign.kt`](core/src/main/kotlin/dev/corebreach/level/Campaign.kt) mit festem Seed aus handgebauten Bausteinen zusammen:
+jedes Gerät bekommt exakt dieselben Level. Die Boss-Logik steckt in [`Boss.kt`](core/src/main/kotlin/dev/corebreach/world/Boss.kt). Jeder Boss besteht aus kombinierbaren *Traits*.
 
 ---
 
@@ -126,13 +153,14 @@ Level sind ASCII in [`core/src/main/kotlin/dev/corebreach/level/Levels.kt`](core
 #  Block        P  Spawn (1x)      X  Exit
 D  Daemon       ^  Spikes          S  Shard (genau 3x)
 G  Gravity      T  Terminal        F  Firewall
+C  Checkpoint   B  Boss-Spawn      R  Gravity-Reset
 .  leer
 ```
 
 Sprungphysik als Faustregel: **2 Blöcke hoch**, **bis 4 Blöcke weit**.
 
 ```bash
-./gradlew core:test    # Level-Validator: Spawn, 3 Shards, geschlossener Rand, Spikes befestigt, ...
+./gradlew core:test    # Level-Validator: alle 100 Level, Boss alle 10 Level, Spawn, 3 Shards, geschlossener Rand, ...
 ```
 
 Der Validator läuft in CI vor jedem Build. Kaputtes Level = roter Build, keine APK.
@@ -176,9 +204,9 @@ core-breach/
 - [x] **M0** Pipeline: GitHub Actions, Docker-Builder, Signing
 - [x] **M1** Core-Physik: Rollen, Sprung, Coyote-Time, Daemons, Stomp
 - [x] **M2** Welt 1 BOOTLOADER: 5 Level, Gravity, Firewalls, Savegame
-- [ ] **M3** Juice: Musik-Loops, Partikel, Boss KERNEL_PANIC.EXE
-- [ ] **M4** Welt 2 USERSPACE: Overclock-Ability, Watchdogs
-- [ ] **M5** Welt 3–5, F-Droid
+- [x] **M3** Kampagne: 100 Level in 10 Welten, Checkpoints, 10 Malware-Bosse
+- [ ] **M4** Juice: Musik-Loops, Partikel, Overclock-Ability
+- [ ] **M5** F-Droid
 
 ## Support
 

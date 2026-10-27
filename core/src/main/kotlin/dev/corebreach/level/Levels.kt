@@ -10,10 +10,17 @@ package dev.corebreach.level
  *   F  Firewall (ein Terminal oeffnet die naechste F-Spalte rechts davon)
  *   .  leer
  *
+ *   C  Checkpoint            B  Boss-Spawn (nur Arena-Level)
+ *   R  Gravity-Reset (setzt die Gravitation auf normal, Saeule ueber volle Hoehe)
+ *
  * Neues Level: Block unten anhaengen, `./gradlew core:test` prueft die Regeln.
+ * Diese 5 Level sind Welt 1, Level 1-5 der Kampagne, den Rest baut [Campaign].
  */
 object Levels {
-    val all: List<LevelData> = listOf(
+    /** Komplette Kampagne: 100 Level, Boss alle 10 Level. */
+    val all: List<LevelData> by lazy { Campaign.build(handmade) }
+
+    val handmade: List<LevelData> = listOf(
         LevelData(
             id = 1, name = "BOOT.SEQ",
             rows = listOf(

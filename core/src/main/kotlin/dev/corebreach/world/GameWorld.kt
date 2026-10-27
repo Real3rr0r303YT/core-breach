@@ -40,7 +40,7 @@ object Phys {
     const val MAX_INTEGRITY = 3
 }
 
-enum class Tag { CORE, SOLID, DAEMON, SPIKE, SHARD, GRAVITY, TERMINAL, FIREWALL, EXIT }
+enum class Tag { CORE, SOLID, DAEMON, SPIKE, SHARD, GRAVITY, TERMINAL, FIREWALL, EXIT, CHECKPOINT, BOSS, GRAVITY_RESET }
 
 /** Alles, was im Level lebt. (x, y) = Tile-Ursprung unten links. */
 class Entity(val tag: Tag, val x: Int, val y: Int) {
@@ -86,6 +86,10 @@ interface WorldEvents {
     fun onTerminal() {}
     fun onExit() {}
     fun onSegfault() {}
+    fun onCheckpoint() {}
+    fun onBossHit() {}
+    fun onBossDown() {}
+    fun onBossAlert(text: String) {}
 }
 
 class GameWorld(val level: LevelData, private val events: WorldEvents) : ContactListener {
@@ -117,6 +121,17 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
     var grounded = false
         private set
 
+    /** Boss dieses Levels (nur Arena-Level), null sonst. */
+    var boss: Boss? = null
+        private set
+
+    /** Letzte horizontale Eingabe (-1, 0, 1) - die Spyware liest mit. */
+    var inputDir = 0f
+        private set
+
+    /** Zero-Day-Exploit: links/rechts vertauscht. */
+    var inputInverted = false
+
     /** Letzte Positionen fuer den Trail-Effekt. */
     val trail = ArrayDeque<Vector2>()
 
@@ -135,6 +150,9 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
         buildSolids()
         buildEntities()
         core = createCore(spawn.x, spawn.y)
+        level.boss?.let { type ->
+            level.forEachTile { x, y, c -> if (c == Tile.BOSS) boss = createBoss(type, x, y) }
+        }
     }
 
     // ------------------------------------------------------------------ build
@@ -188,6 +206,8 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
                 Tile.TERMINAL -> entities += createSensor(Tag.TERMINAL, x, y, box(0.4f, 0.4f))
                 Tile.EXIT -> entities += createSensor(Tag.EXIT, x, y, box(0.3f, 0.45f))
                 Tile.FIREWALL -> entities += createFirewall(x, y)
+                Tile.CHECKPOINT -> entities += createSensor(Tag.CHECKPOINT, x, y, box(0.3f, 0.45f))
+                Tile.GRAVITY_RESET -> entities += createSensor(Tag.GRAVITY_RESET, x, y, box(0.15f, 0.5f))
             }
         }
     }
@@ -276,6 +296,47 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
         return e
     }
 
+    private fun createBoss(bossType: BossType, x: Int, y: Int): Boss {
+        val e = Entity(Tag.BOSS, x, y)
+        val body = world.createBody(BodyDef().apply {
+            type = BodyDef.BodyType.KinematicBody
+            position.set(x + 0.5f, y + Boss.HALF)
+        })
+        val shape = PolygonShape().apply { setAsBox(Boss.HALF, Boss.HALF) }
+        body.createFixture(FixtureDef().apply {
+            this.shape = shape
+            friction = 0.6f
+        }).userData = e
+        shape.dispose()
+        e.body = body
+        entities += e
+        return Boss(bossType, e, this)
+    }
+
+    /** Daemon zur Laufzeit erzeugen (Worm-Kopien, Botnet-Bots). Nur ausserhalb von world.step() aufrufen. */
+    fun spawnDaemon(x: Int, y: Int): Entity? {
+        if (level.isSolid(x, y) || !level.isSolid(x, y - 1)) return null
+        return createDaemon(x, y).also { entities += it }
+    }
+
+    fun killEntity(e: Entity) = kill(e)
+
+    fun bossAlert(text: String) = events.onBossAlert(text)
+
+    fun bossDefeated(b: Boss) {
+        kill(b.entity)
+        events.onBossDown()
+    }
+
+    /** Sofortiger Absturz (z.B. Ransomware-Countdown abgelaufen). */
+    fun forceSegfault() {
+        if (completed || dead) return
+        integrity = 0
+        dead = true
+        core.setLinearVelocity(0f, 0f)
+        events.onSegfault()
+    }
+
     private fun createCore(x: Float, y: Float): Body {
         val body = world.createBody(BodyDef().apply {
             type = BodyDef.BodyType.DynamicBody
@@ -336,6 +397,7 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
         }
 
         updateDaemons()
+        if (!completed && !dead) boss?.update(dt)
 
         for (e in entities) if (!e.alive && e.deathTime >= 0f) e.deathTime += dt
 
@@ -353,7 +415,9 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
         grounded = checkGrounded()
         coyote = if (grounded) Phys.COYOTE else max(0f, coyote - dt)
 
-        val dir = (if (input.right) 1f else 0f) - (if (input.left) 1f else 0f)
+        var dir = (if (input.right) 1f else 0f) - (if (input.left) 1f else 0f)
+        if (inputInverted) dir = -dir
+        inputDir = dir
         val v = core.linearVelocity
 
         if (dir != 0f) {
@@ -415,7 +479,7 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
             val x = b.position.x
             if (x >= e.maxX) e.dir = -1f
             if (x <= e.minX) e.dir = 1f
-            b.setLinearVelocity(e.dir * Phys.DAEMON_SPEED, 0f)
+            b.setLinearVelocity(e.dir * Phys.DAEMON_SPEED * level.speed, 0f)
         }
     }
 
@@ -500,11 +564,49 @@ class GameWorld(val level: LevelData, private val events: WorldEvents) : Contact
                 other.used = true
                 pending += {
                     openFirewalls(other)
+                    boss?.onTerminal()
                     events.onTerminal()
                 }
             }
 
+            // Reset-Feld: setzt die Gravitation immer auf normal (schaltet nicht um)
+            Tag.GRAVITY_RESET -> if (gravSign < 0f) {
+                gravityCooldown = Phys.GRAVITY_COOLDOWN
+                pending += {
+                    setGravity(1f)
+                    events.onGravity()
+                }
+            }
+
+            Tag.CHECKPOINT -> if (!other.used) {
+                other.used = true
+                spawn.set(other.x + 0.5f, other.y + Phys.CORE_RADIUS + 0.02f)
+                events.onCheckpoint()
+            }
+
+            Tag.BOSS -> {
+                val b = boss ?: return
+                if (!b.solid) return
+                val n = contact.worldManifold.normal
+                val nx = if (coreIsA) n.x else -n.x
+                val ny = if (coreIsA) n.y else -n.y
+                if (ny < -0.55f) {
+                    // Von oben: Stomp, auch wenn er gerade nicht verwundbar ist -> abprallen
+                    pending += {
+                        core.setLinearVelocity(core.linearVelocity.x, Phys.STOMP_BOUNCE)
+                        if (b.stomp()) events.onBossHit() else events.onStomp()
+                    }
+                } else {
+                    val away = if (abs(nx) > 0.01f) -sign(nx) else -b.dir
+                    pending += {
+                        if (invulnerable <= 0f) core.setLinearVelocity(away * 7f, 5f * gravSign)
+                        damage(respawn = false)
+                    }
+                }
+            }
+
             Tag.EXIT -> {
+                if (boss?.defeated == false) return
                 completed = true
                 pending += {
                     core.setLinearVelocity(0f, 0f)

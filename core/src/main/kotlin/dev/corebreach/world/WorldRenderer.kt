@@ -3,6 +3,7 @@ package dev.corebreach.world
 import com.badlogic.gdx.graphics.OrthographicCamera
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.math.MathUtils
+import dev.corebreach.ui.DotFont
 import dev.corebreach.ui.Palette
 import kotlin.math.max
 import kotlin.math.min
@@ -51,15 +52,18 @@ class WorldRenderer(private val sr: ShapeRenderer) {
         }
 
         for (e in gw.entities) {
-            if (e.x < x0 - 1 || e.x > x1 + 1) continue
+            if (e.tag != Tag.BOSS && (e.x < x0 - 1 || e.x > x1 + 1)) continue
             when (e.tag) {
                 Tag.SPIKE -> drawSpike(e, t)
                 Tag.SHARD -> drawShard(e, t)
                 Tag.GRAVITY -> drawGravity(e, gw.gravSign, t)
                 Tag.TERMINAL -> drawTerminal(e, t)
                 Tag.FIREWALL -> drawFirewall(e, t)
-                Tag.EXIT -> drawExit(e, t)
+                Tag.EXIT -> drawExit(e, t, gw.boss?.defeated == false)
                 Tag.DAEMON -> drawDaemon(e, t)
+                Tag.CHECKPOINT -> drawCheckpoint(e, t)
+                Tag.GRAVITY_RESET -> drawReset(e, gw.gravSign, t)
+                Tag.BOSS -> gw.boss?.let { drawBoss(it, gw, t) }
                 else -> {}
             }
         }
@@ -237,14 +241,130 @@ class WorldRenderer(private val sr: ShapeRenderer) {
         }
     }
 
-    private fun drawExit(e: Entity, t: Float) {
+    private fun drawExit(e: Entity, t: Float, locked: Boolean) {
         val cx = e.x + 0.5f
         val cy = e.y + 0.5f
+        if (locked) {
+            // Gesperrt, solange der Boss lebt
+            square(cx, cy, 0.42f, MathUtils.PI / 4f, Palette.DIM, 0.06f)
+            sr.color = Palette.a(Palette.CORE, 0.5f + 0.5f * MathUtils.sin(t * 6f))
+            sr.rectLine(cx - 0.22f, cy - 0.22f, cx + 0.22f, cy + 0.22f, 0.07f)
+            sr.rectLine(cx - 0.22f, cy + 0.22f, cx + 0.22f, cy - 0.22f, 0.07f)
+            return
+        }
         square(cx, cy, 0.42f, t * 1.4f, Palette.a(Palette.CORE, 1f), 0.06f)
         square(cx, cy, 0.27f, -t * 2.2f, Palette.a(Palette.SIGNAL, 1f), 0.05f)
         val pulse = 0.5f + 0.5f * MathUtils.sin(t * 5f)
         sr.color = Palette.a(Palette.CORE, 0.4f + 0.6f * pulse)
         sr.circle(cx, cy, 0.07f + 0.04f * pulse, 10)
+    }
+
+    private fun drawReset(e: Entity, gravSign: Float, t: Float) {
+        // Duenne Dot-Saeule, leuchtet auf, solange die Gravitation invertiert ist
+        val active = gravSign < 0f
+        val x = e.x + 0.5f
+        for (k in 0..3) {
+            val wave = 0.5f + 0.5f * MathUtils.sin(t * 6f - (e.y * 4 + k) * 0.8f)
+            sr.color = if (active) Palette.a(Palette.CORE, 0.3f + 0.6f * wave) else Palette.a(Palette.DIM, 0.5f)
+            sr.circle(x, e.y + 0.125f + k * 0.25f, 0.035f, 4)
+        }
+    }
+
+    private fun drawCheckpoint(e: Entity, t: Float) {
+        val x = e.x + 0.5f
+        val y = e.y.toFloat()
+        sr.color = if (e.used) Palette.SIGNAL else Palette.DIM
+        sr.rect(x - 0.03f, y, 0.06f, 0.9f)
+        // Fahne aus Dots, weht leicht
+        sr.color = if (e.used) Palette.CORE else Palette.DIM
+        for (i in 0..3) for (j in 0..2) {
+            val wave = MathUtils.sin(t * 5f + i * 0.9f) * 0.04f
+            sr.circle(x + 0.08f + i * 0.1f, y + 0.62f + j * 0.1f + wave, 0.035f, 4)
+        }
+    }
+
+    private fun drawBoss(b: Boss, gw: GameWorld, t: Float) {
+        val e = b.entity
+        val h = Boss.HALF
+        val cx = e.cx
+        val cy = e.cy
+        if (!e.alive) {
+            // Grosse Pixel-Explosion
+            val d = e.deathTime
+            if (d < 0f || d > 1.2f) return
+            val a = 1f - d / 1.2f
+            for (k in 0 until 28) {
+                val ang = k * (360f / 28f) * MathUtils.degreesToRadians
+                val dist = d * (3f + (k % 4) * 1.4f)
+                sr.color = Palette.a(if (k % 3 == 0) Palette.CORE else Palette.SIGNAL, a)
+                sr.rect(cx + MathUtils.cos(ang) * dist - 0.1f, cy + MathUtils.sin(ang) * dist - 0.1f, 0.2f, 0.2f)
+            }
+            sr.color = Palette.a(Palette.CORE, a * 0.6f)
+            sr.circle(cx, cy, 1.4f * d, 24)
+            return
+        }
+        if (b.disguised) {
+            // Trojaner: sieht aus wie ein harmloser Data-Shard ... fast
+            val y = cy - h + 0.5f + MathUtils.sin(t * 3f) * 0.08f
+            val s = 0.2f + 0.03f * MathUtils.sin(t * 6f)
+            sr.color = Palette.a(Palette.SIGNAL, 0.12f)
+            sr.circle(cx, y, 0.38f, 16)
+            sr.color = if ((t * 0.7f) % 1f < 0.06f) Palette.CORE else Palette.SIGNAL
+            sr.triangle(cx - s, y, cx + s, y, cx, y + s * 1.5f)
+            sr.triangle(cx - s, y, cx + s, y, cx, y - s * 1.5f)
+            return
+        }
+        if (b.hidden) {
+            // Rootkit: nur ein Flimmern im Raster
+            if (MathUtils.sin(t * 13f) > 0.6f) {
+                sr.color = Palette.a(Palette.SIGNAL, 0.12f)
+                for (i in -2..2) for (j in -2..2) sr.circle(cx + i * 0.3f, cy + j * 0.3f, 0.03f, 4)
+            }
+            return
+        }
+        if (b.hurt > 0f && (t * 16f).toInt() % 2 == 0) return
+
+        // Aura
+        val pulse = 0.5f + 0.5f * MathUtils.sin(t * 4f)
+        for (i in 3 downTo 1) {
+            sr.color = Palette.a(Palette.CORE, 0.05f + 0.03f * pulse)
+            sr.rect(cx - h - i * 0.12f, cy - h - i * 0.12f, (h + i * 0.12f) * 2, (h + i * 0.12f) * 2)
+        }
+        // Gehaeuse
+        sr.color = if (b.vulnerable) Palette.SIGNAL else Palette.DAEMON
+        sr.rect(cx - h, cy - h, h * 2, h * 2)
+        sr.color = Palette.VOID
+        sr.rect(cx - h + 0.1f, cy - h + 0.1f, h * 2 - 0.2f, h * 2 - 0.2f)
+        // Schwachstelle oben
+        sr.color = Palette.a(Palette.CORE, if (b.vulnerable) 0.6f + 0.4f * pulse else 0.25f)
+        sr.rect(cx - h + 0.1f, cy + h - 0.22f, h * 2 - 0.2f, 0.12f)
+        // Kuerzel im Dot-Font
+        DotFont.draw(sr, code(b.type), cx, cy - 0.15f, 0.085f, Palette.SIGNAL, DotFont.CENTER)
+        // Zwei Augen folgen CORE-0
+        val p = gw.core.position
+        val dx = MathUtils.clamp(p.x - cx, -1f, 1f) * 0.12f
+        val dy = MathUtils.clamp(p.y - cy, -1f, 1f) * 0.08f
+        sr.color = Palette.CORE
+        sr.circle(cx - 0.3f + dx, cy + 0.3f + dy, 0.11f, 10)
+        sr.circle(cx + 0.3f + dx, cy + 0.3f + dy, 0.11f, 10)
+        // HP-Pips ueber dem Boss
+        for (i in 0 until b.maxHp) {
+            sr.color = if (i < b.hp) Palette.CORE else Palette.DIM
+            sr.circle(cx + (i - (b.maxHp - 1) / 2f) * 0.3f, cy + h + 0.35f, if (i < b.hp) 0.09f else 0.05f, 8)
+        }
+    }
+
+    private fun code(type: BossType): String = when (type) {
+        BossType.RANSOMWARE -> "RSW"
+        BossType.TROJAN -> "TRJ"
+        BossType.SPYWARE -> "SPY"
+        BossType.WORM -> "WRM"
+        BossType.ROOTKIT -> "RKT"
+        BossType.ADWARE -> "ADW"
+        BossType.BOTNET -> "CNC"
+        BossType.ZERO_DAY -> "0DY"
+        BossType.APT -> "APT"
+        BossType.OMNIGRID -> "OMG"
     }
 
     private fun square(cx: Float, cy: Float, r: Float, rot: Float, color: com.badlogic.gdx.graphics.Color, lw: Float) {

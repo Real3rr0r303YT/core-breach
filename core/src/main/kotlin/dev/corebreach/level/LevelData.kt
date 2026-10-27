@@ -1,5 +1,7 @@
 package dev.corebreach.level
 
+import dev.corebreach.world.BossType
+
 object Tile {
     const val SOLID = '#'
     const val EMPTY = '.'
@@ -11,14 +13,35 @@ object Tile {
     const val GRAVITY = 'G'
     const val TERMINAL = 'T'
     const val FIREWALL = 'F'
+    const val CHECKPOINT = 'C'
+    const val BOSS = 'B'
+    const val GRAVITY_RESET = 'R'
 
-    const val ALL = "#.PXD^SGTF"
+    const val ALL = "#.PXD^SGTFCBR"
+}
+
+/** Die 10 Welten der Kampagne, je 10 Level, das 10. ist immer ein Boss. */
+object Worlds {
+    val names = listOf(
+        "BOOTLOADER", "USERSPACE", "FILESYSTEM", "NETSTACK", "KERNEL",
+        "BROWSER", "CLOUD", "FIRMWARE", "MAINFRAME", "OMNIGRID",
+    )
+    const val LEVELS_PER_WORLD = 10
 }
 
 /**
  * Ein Level im ASCII-Format. Koordinaten: x nach rechts, y nach oben, (0,0) = unten links.
+ *
+ * @param speed Multiplikator fuer die Daemon-Geschwindigkeit (Schwierigkeitskurve der Kampagne)
+ * @param boss  Boss dieses Levels (nur Arena-Level jeder 10. Stufe)
  */
-class LevelData(val id: Int, val name: String, val rows: List<String>) {
+class LevelData(
+    val id: Int,
+    val name: String,
+    val rows: List<String>,
+    val speed: Float = 1f,
+    val boss: BossType? = null,
+) {
     val height: Int = rows.size
     val width: Int = rows.maxOf { it.length }
 
@@ -38,5 +61,9 @@ class LevelData(val id: Int, val name: String, val rows: List<String>) {
         for (y in 0 until height) for (x in 0 until width) action(x, y, at(x, y))
     }
 
-    val label: String get() = "W1-" + id.toString().padStart(2, '0')
+    /** Welt 1..10 */
+    val world: Int get() = (id - 1) / Worlds.LEVELS_PER_WORLD + 1
+    val worldName: String get() = Worlds.names[world - 1]
+
+    val label: String get() = "W$world-" + ((id - 1) % Worlds.LEVELS_PER_WORLD + 1).toString().padStart(2, '0')
 }
