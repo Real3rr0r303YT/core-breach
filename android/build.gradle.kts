@@ -28,9 +28,9 @@ android {
             ?: "0.1.0-dev"
     }
 
+    // Kotlin-Quellen liegen in src/main/java (Default, wird von AGP + Kotlin-Plugin automatisch gebaut)
     sourceSets["main"].apply {
         manifest.srcFile("AndroidManifest.xml")
-        java.srcDirs("src/main/kotlin")
         res.srcDirs("res")
         assets.srcDirs("../assets")
         jniLibs.srcDirs("libs")
@@ -87,24 +87,33 @@ dependencies {
     }
 }
 
-// libGDX-Natives (.so) aus den natives-*.jar nach android/libs/<abi>/ entpacken
+// libGDX-Natives (.so) aus den natives-*.jar nach android/libs/<abi>/ entpacken.
+// Bewusst OHNE deklarierte inputs/outputs (wie im offiziellen libGDX-Liftoff-Template):
+// ein deklarierter Output auf android/libs loest sonst Gradles strenge
+// "implicit dependency"-Validierung bei allen AGP-Tasks aus, die die jniLibs lesen.
 val copyAndroidNatives by tasks.registering {
-    val nativeJars = natives
-    val libsDir = layout.projectDirectory.dir("libs")
-    inputs.files(nativeJars)
-    outputs.dir(libsDir)
-    doLast {
-        nativeJars.files.forEach { jar ->
-            val abi = jar.name.substringAfter("natives-").removeSuffix(".jar")
-            val outDir = libsDir.dir(abi).asFile.apply { mkdirs() }
-            project.copy {
-                from(project.zipTree(jar))
+    group = "build"
+    description = "Entpackt die libGDX/Box2D-Natives nach android/libs/<abi>/"
+    doFirst {
+        val abis = setOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        natives.files.forEach { jar ->
+            val abi = jar.nameWithoutExtension.substringAfterLast("natives-")
+            check(abi in abis) { "Unerwartetes Native-Jar: ${jar.name}" }
+            val outDir = file("libs/$abi")
+            outDir.mkdirs()
+            copy {
+                from(zipTree(jar))
                 into(outDir)
                 include("*.so")
             }
         }
+        val count = fileTree("libs").matching { include("**/*.so") }.files.size
+        check(count >= 8) { "Nur $count .so-Dateien entpackt, erwartet: 8 (gdx + box2d x 4 ABIs)" }
+        logger.lifecycle(">> CORE//BREACH: $count native libs bereit")
     }
 }
 
+// Natives muessen VOR jedem Build-Schritt liegen, nicht erst beim Mergen
+tasks.matching { it.name == "preBuild" }.configureEach { dependsOn(copyAndroidNatives) }
 tasks.matching { it.name.contains("merge") && it.name.contains("JniLibFolders") }
     .configureEach { dependsOn(copyAndroidNatives) }

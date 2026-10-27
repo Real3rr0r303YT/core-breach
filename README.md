@@ -12,6 +12,10 @@ Roll, spring, zerquetsch System-Daemons, knack Firewalls und flip die Gravitatio
 
 OLED-Schwarz `#000000` · Dot-Matrix-Weiß · Signal-Rot `#DA291C` · Glitch-Shader · Haptik · null Bitmaps.
 
+[![Build](https://img.shields.io/badge/build-GitHub%20Actions-000000?style=flat-square&logo=githubactions&logoColor=white)](../../actions)
+[![License: MIT](https://img.shields.io/badge/license-MIT-DA291C?style=flat-square)](LICENSE)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-3rr0r303yt-DA291C?style=flat-square&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/3rr0r303yt)
+
 > Inspiriert von klassischen Rolling-Ball-Platformern. Eigenständiges Projekt, keine Assets oder Namen Dritter.
 
 ---
@@ -176,6 +180,14 @@ core-breach/
 - [ ] **M4** Welt 2 USERSPACE: Overclock-Ability, Watchdogs
 - [ ] **M5** Welt 3–5, F-Droid
 
+## Support
+
+CORE//BREACH ist kostenlos, werbefrei und ohne Tracking. Wenn dir das Spiel gefällt, halt den Core am Laufen:
+
+### ☕ [buymeacoffee.com/3rr0r303yt](https://buymeacoffee.com/3rr0r303yt)
+
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20CORE%2F%2FBREACH-DA291C?style=for-the-badge&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/3rr0r303yt)
+
 ## Lizenz
 
-Code: **GPL-3.0** (siehe `LICENSE`). Sounds in `assets/sfx`: prozedural generiert, CC0.
+Code: **MIT** (siehe [`LICENSE`](LICENSE)). Sounds in `assets/sfx`: prozedural generiert, CC0.

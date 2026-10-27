@@ -79,7 +79,7 @@ class BootScreen(game: CoreBreachGame) : CyberScreen(game) {
         if (typed >= totalChars && ((time * 2f).toInt() % 2 == 0)) {
             DotFont.draw(sr, "TAP TO BREACH", w / 2f, h * 0.1f, u * 0.7f, Palette.CORE, DotFont.CENTER)
         }
-        DotFont.draw(sr, "3RR0R // GPL-3.0", w - u * 2f, u * 2f, u * 0.3f, Palette.DIM, DotFont.RIGHT)
+        DotFont.draw(sr, "3RR0R // MIT", w - u * 2f, u * 2f, u * 0.3f, Palette.DIM, DotFont.RIGHT)
         sr.end()
     }
 }
