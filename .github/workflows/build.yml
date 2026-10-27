@@ -59,17 +59,34 @@ jobs:
           KEYSTORE_PASS: ${{ secrets.KEYSTORE_PASS }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASS: ${{ secrets.KEY_PASS }}
-        run: ./gradlew --no-daemon android:assembleRelease
+        run: ./gradlew --no-daemon --stacktrace android:assembleRelease
 
-      - name: Collect APK
+      - name: Collect + verify APK
         id: apk
         run: |
+          set -euo pipefail
           mkdir -p dist
           if [[ "$GITHUB_REF" == refs/tags/* ]]; then VERSION="$GITHUB_REF_NAME"; else VERSION="build-${GITHUB_RUN_NUMBER}"; fi
           SRC=$(find android/build/outputs/apk/release -name '*.apk' | head -n 1)
+          if [[ -z "$SRC" ]]; then echo "::error::Keine APK gefunden"; exit 1; fi
+          # Ohne libgdx.so / libgdx-box2d.so crasht das Spiel sofort beim Start
+          for lib in libgdx.so libgdx-box2d.so; do
+            unzip -l "$SRC" | grep -q "arm64-v8a/$lib" || { echo "::error::$lib fehlt in der APK"; exit 1; }
+          done
           cp "$SRC" "dist/CORE-BREACH-${VERSION}.apk"
           echo "file=dist/CORE-BREACH-${VERSION}.apk" >> "$GITHUB_OUTPUT"
           ls -lh dist/
+
+      - name: Upload build reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-reports
+          path: |
+            **/build/reports/
+            **/build/outputs/logs/
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Upload artifact
         uses: actions/upload-artifact@v6
