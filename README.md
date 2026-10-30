@@ -16,9 +16,9 @@ Roll, spring, zerquetsch Daemons, hack Firewalls, flip die Gravitation – und l
 [![Release](https://img.shields.io/badge/release-v2.0.0-DA291C?style=for-the-badge)](https://github.com/Real3rr0r303YT/core-breach/releases/latest)
 [![Android](https://img.shields.io/badge/Android-8.0%2B-000000?style=for-the-badge&logo=android&logoColor=white)](https://github.com/Real3rr0r303YT/core-breach/releases/latest)
 [![Build](https://img.shields.io/badge/build-GitHub%20Actions-000000?style=for-the-badge&logo=githubactions&logoColor=white)](../../actions)
-[![License: MIT](https://img.shields.io/badge/license-MIT-DA291C?style=for-the-badge)](LICENSE)
+[![License: GPL v3](https://img.shields.io/badge/license-GPLv3-DA291C?style=for-the-badge)](LICENSE)
 
-**[⬇ APK herunterladen](https://github.com/Real3rr0r303YT/core-breach/releases/latest)** · **[☕ Support](https://buymeacoffee.com/3rr0r303yt)**
+**[⬇ APK herunterladen](https://github.com/Real3rr0r303YT/core-breach/releases/latest)** · **[☕ Support](https://buymeacoffee.com/3rr0r303YT)**
 
 Kostenlos · Keine Werbung · Kein Tracking · Open Source
 
@@ -261,9 +261,9 @@ core-breach/
 CORE//BREACH ist kostenlos, werbefrei und ohne Tracking – und bleibt es auch.<br>
 Wenn dir das Spiel gefällt, halt den Core am Laufen:
 
-[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20CORE%2F%2FBREACH-DA291C?style=for-the-badge&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/3rr0r303yt)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20Me%20a%20Coffee-Support%20CORE%2F%2FBREACH-DA291C?style=for-the-badge&logo=buymeacoffee&logoColor=white)](https://buymeacoffee.com/3rr0r303YT)
 
-**[buymeacoffee.com/3rr0r303yt](https://buymeacoffee.com/3rr0r303yt)**
+**[buymeacoffee.com/3rr0r303YT](https://buymeacoffee.com/3rr0r303YT)**
 
 Ein ⭐ für das Repo hilft auch.
 
@@ -273,6 +273,10 @@ Ein ⭐ für das Repo hilft auch.
 
 ## Lizenz
 
-Code: **MIT** (siehe [`LICENSE`](LICENSE)). Sounds in `assets/sfx`: prozedural generiert, CC0.
+Code: **GNU GPL-3.0** (siehe [`LICENSE`](LICENSE)). Sounds in `assets/sfx`: prozedural generiert, CC0.
 
 > Inspiriert von klassischen Rolling-Ball-Platformern. Eigenständiges Projekt, keine Assets oder Namen Dritter.
+
+---
+
+<p align="center"><b>Made by <a href="https://github.com/Real3rr0r303YT">Real3rr0r303YT</a></b> · GPL-3.0</p>
